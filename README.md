@@ -29,7 +29,7 @@ Before installing the plugin, please make sure to install the following package 
 
 1. Clone or download this repository.
 2. Copy the entire folder into your QGIS plugins directory:
-   ```text
+```text
 # Typical plugin path for Windows:
 C:\Users\<YourUsername>\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins
 
