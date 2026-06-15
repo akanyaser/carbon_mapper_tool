@@ -1,0 +1,14 @@
+# Python geçici dosyaları
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# QGIS ve Editör geçici dosyaları
+.pytest_cache/
+.vscode/
+.idea/
+*.user
+
+# Kişisel test dataları veya loglar
+*.log
