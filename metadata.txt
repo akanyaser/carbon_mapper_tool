@@ -1,0 +1,16 @@
+[general]
+name=Carbon Mapper Plugin
+qgisMinimumVersion=3.0
+description=Manage and analyze high-emission methane (CH4) and carbon dioxide (CO2) plume data grids.
+about=This plugin allows users to access, download, and analyze atmospheric pollution data from the Carbon Mapper data index within QGIS. It supports setting an area of interest (AOI), filtering remote sensing products, and performing advanced spatial core analytics on Level-2B and Level-3A raster and vector matrices. This study is carried out as part of the Geoinformatics Projects frameworks.
+version=0.1
+author=Yaser Enes Akan
+email=yaserenes.akan@mail.polimi.it
+
+category=Plugins
+tags=python, carbon mapper, ch4, co2, remote sensing, spatial analysis
+homepage=https://github.com/yourusername/carbon_mapper_plugin
+tracker=https://github.com/yourusername/carbon_mapper_plugin/issues
+repository=https://github.com/yourusername/carbon_mapper_plugin
+
+experimental=True
