@@ -16,9 +16,8 @@ This plugin specifically supports data from:
 * Secure data authentication via Carbon Mapper API Bearer Tokens
 * Raster Thresholding & Hotspot Isolation (`AnalysisManager` pipeline)
 * Adaptive morphological filtering and vector plume extraction (`GDAL Sieve` & `GDAL Polygonize`)
-* Multi-criteria 12-point continuous environmental risk scoring (`PlumeEnvironmentalAnalysisManager`)
+* Multi-criteria environmental risk scoring (`PlumeEnvironmentalAnalysisManager`)
 * Automated internal attribute database table enrichment
-* Dynamic local asset tracking with comprehensive diagnostic text reports (`Plume_Impact_Report_*.txt`)
 * QGIS layer registry canvas integration and layout synchronization
 
 ## ⚙️ Installation
