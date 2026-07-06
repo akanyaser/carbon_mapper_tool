@@ -2,7 +2,7 @@
 
 A QGIS plugin for searching, downloading and analyzing Carbon Mapper methane (CH4) and carbon dioxide (CO2) datasets directly within QGIS.
 
-The plugin integrates both the Carbon Mapper STAC API and Data API, allowing users to discover plume products, download remote sensing assets, visualize emission sources, and perform statistical comparisons between multiple geographic regions.
+The plugin integrates both the Carbon Mapper STAC API and Data API, allowing users to discover plume products, download remote sensing assets, visualize emission sources, and perform statistical comparisons between multiple geographic regions. This project was developed as part of the Geoinformatics Projects course at Politecnico di Milano.
 
 ---
 
