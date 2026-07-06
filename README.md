@@ -105,6 +105,7 @@ The plugin provides an interactive graphical interface including:
 ## Requirements
 
 - QGIS 3.22 or higher
+- Internet connection
 - Python package:
 
 ```bash
@@ -138,6 +139,80 @@ C:\Users\<Username>\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins
 Restart QGIS and enable the plugin from:
 
 **Plugins → Manage and Install Plugins**
+
+---
+
+# - Quick Start
+
+## 1. Area of Interest
+
+Open the plugin.
+
+Select:
+
+- Map Canvas
+
+or
+
+- Manual Bounding Box
+
+Click Search.
+
+---
+
+## 2. Download
+
+Choose:
+
+- Collection
+
+- Asset
+
+Click Download.
+
+---
+
+## 3. Statistical Comparison
+
+Open the Analysis tab.
+
+Select:
+
+- Polygon Layer
+
+- Attribute Field
+
+- Two or more regions
+
+- Gas
+
+- Date Range
+
+Click Compare.
+
+Export the results as CSV if desired.
+
+---
+
+# STAC API Authentication
+
+Some STAC API operations require a Carbon Mapper API Token.
+
+To obtain one:
+
+1. Visit:
+
+https://data.carbonmapper.org
+
+2. Sign in.
+
+3. Generate an API Token.
+
+4. Paste it into the API Token field.
+
+Note:
+
+The Data API used by the Statistical Comparison Tool does not require authentication.
 
 ---
 
