@@ -8,7 +8,7 @@ This plugin integrates both the **Carbon Mapper STAC API** and the **Carbon Mapp
 
 ---
 
-# 🌍 Supported Services
+# - Supported Services
 
 - Carbon Mapper STAC API
 - Carbon Mapper Data API
@@ -20,9 +20,9 @@ Official websites:
 
 ---
 
-# ✨ Features
+#  Features
 
-## 🔍 Dataset Discovery
+## - Dataset Discovery
 
 - Search Carbon Mapper collections through the STAC API
 - Search plume and source records through the Data API
@@ -35,7 +35,7 @@ Official websites:
 
 ---
 
-## 📥 Asset Download
+## - Asset Download
 
 Download available Carbon Mapper assets directly into QGIS.
 
@@ -49,7 +49,7 @@ Supported asset types include:
 
 ---
 
-## 🗺️ Visualization
+## - Visualization
 
 - Display plume locations on the QGIS map
 - Display emission source locations
@@ -58,7 +58,7 @@ Supported asset types include:
 
 ---
 
-## 📊 Statistical Comparison Tool
+## - Statistical Comparison Tool
 
 The Statistical Comparison Tool allows users to compare multiple geographic regions using Carbon Mapper plume observations.
 
@@ -85,7 +85,7 @@ Calculated statistics include:
 
 ---
 
-## 🎯 User Interface
+## - User Interface
 
 The plugin provides an interactive graphical interface including:
 
@@ -100,7 +100,7 @@ The plugin provides an interactive graphical interface including:
 
 ---
 
-# ⚙️ Installation
+# - Installation
 
 ## Requirements
 
@@ -141,7 +141,7 @@ Restart QGIS and enable the plugin from:
 
 ---
 
-# 📁 Project Structure
+# - Project Structure
 
 ```text
 plugin.py
@@ -167,7 +167,7 @@ metadata.txt
 
 ---
 
-# 🛠 Technologies
+# - Technologies
 
 - Python
 - PyQGIS
@@ -177,7 +177,7 @@ metadata.txt
 
 ---
 
-# 📄 Data Attribution and Terms of Use
+# - Data Attribution and Terms of Use
 
 This plugin provides access to publicly available Carbon Mapper datasets through the official Carbon Mapper STAC API and Data API.
 
@@ -199,7 +199,7 @@ Carbon Mapper datasets are **not distributed** with this repository and remain s
 
 ---
 
-# 👨‍💻 Author
+#  Author
 
 **Yaser Enes Akan**
 
