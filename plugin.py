@@ -652,65 +652,212 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
             print("'txt_help_guide' found, loading documentation....")
             help_text = """
             <div style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; padding: 5px; color: #333333;">
-               
+
                 <div style="text-align: left; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #cccccc;">
-                    <h2 style="color: #1a365d; margin: 0; font-size: 18px; font-weight: bold;">Carbon Mapper CH4 & CO2 Monitoring Tool</h2>
-                    <p style="margin: 5px 0 0 0; color: #666666; font-size: 12px;">Advanced Remote Sensing Core Analytics Plugin for QGIS</p>
+                    <h2 style="color: #1a365d; margin: 0; font-size: 18px; font-weight: bold;">
+                        Carbon Mapper Data Exploration Tool
+                    </h2>
+                    <p style="margin: 5px 0 0 0; color: #666666; font-size: 12px;">
+                        Search, download and analyze Carbon Mapper methane (CH4) and carbon dioxide (CO2) datasets directly within QGIS.
+                    </p>
                 </div>
 
-                <p>Welcome to the Carbon Mapper Data Manager Plugin. This specialized tool allows you to connect directly to the Carbon Mapper airborne and satellite index to download and analyze high-emission methane (CH4) and carbon dioxide (CO2) plume data matrix maps inside QGIS.</p>
-               
-                <h3 style="color: #1a365d; font-size: 14px; margin-top: 20px; margin-bottom: 8px; font-weight: bold;">
-                    1. Requirements:
-                </h3>
-                <ul style="margin-left: 0; padding-left: 20px; margin-top: 5px;">
-                    <li style="margin-bottom: 5px;"><b>QGIS Installed:</b> Version 3.22 or higher.</li>
-                    <li style="margin-bottom: 5px;"><b>Python Environment:</b> Secure internet connection accessible by QGIS core network handlers.</li>
-                    <li style="margin-bottom: 5px;"><b>Required Packages:</b> Ensure the baseline network dependency is ready via the OSGeo4W Shell or terminal:
-                        <br/><code style="background-color: #f5f5f5; padding: 3px 6px; border: 1px solid #dddddd; border-radius: 3px; font-size: 11px; display: inline-block; margin-top: 5px; color: #333333; font-family: Consolas, Monaco, monospace;">pip install requests</code>
-                    <li style="margin-bottom: 5px;"><b>Core Subsystems:<b> This plugin natively leverages QGIS Processing Framework and GDAL core algorithms (gdal:sieve, gdal:polygonize). No heavy matrix libraries are required.
-                    </li>
-                </ul>
-               
-                <h3 style="color: #1a365d; font-size: 14px; margin-top: 20px; margin-bottom: 8px; font-weight: bold;">
-                    2. How to Get Your API Token:
-                </h3>
-                <p>To query datasets from the Carbon Mapper archive, an official API infrastructure access credential is necessary. Follow these steps:</p>
-                <ol style="margin-left: 0; padding-left: 20px; margin-top: 5px;">
-                    <li style="margin-bottom: 6px;">Visit the data portal at <a href="https://data.carbonmapper.org" style="color: #0066cc; text-decoration: underline;">https://data.carbonmapper.org</a>.</li>
-                    <li style="margin-bottom: 6px;">Register a verified account or log into your researcher workspace.</li>
-                    <li style="margin-bottom: 6px;">Navigate to your <b>User Profile / Developer Settings</b> panel on the dashboard interface.</li>
-                    <li style="margin-bottom: 6px;">Locate the <b>API Keys</b> section and trigger the "Generate New Access Token" action.</li>
-                    <li style="margin-bottom: 6px;">Copy the securely generated alphanumeric hash token string.</li>
-                    <li style="margin-bottom: 6px;">Paste the copied string directly into the <b>API Token Input Box</b> located inside the first tab of this plugin to handle authorization during live asset streams.</li>
-                </ol>
-                <div style="background-color: #f9f9f9; border: 1px solid #dddddd; padding: 10px; margin: 15px 0; border-radius: 4px; font-size: 12px;">
-                    <b>Important Note:</b> Guard your API key securely. If queries unexpectedly fail with authorization faults, refresh your token on the portal or re-verify that the input sequence does not contain accidental trailing spaces.
-                </div>
-
-                <h3 style="color: #1a365d; font-size: 14px; margin-top: 20px; margin-bottom: 8px; font-weight: bold;">
-                    3. Using the Plugin:
-                </h3>
-                <ul style="margin-left: 0; padding-left: 20px; margin-top: 5px; list-style-type: square;">
-                    <li style="margin-bottom: 8px;"><b>Step 1: Select Your AOI (Area of Interest)</b>
-                        <br/><span style="color: #555555; font-size: 12px;">Choose Map Canvas extent or type manual bounding coordinates to limit the target search boundary footprint grid.</span>
-                    </li>
-                    <li style="margin-bottom: 8px;"><b>Step 2: Filter Parameters & Query Index</b>
-                        <br/><span style="color: #555555; font-size: 12px;">Choose the appropriate or filtered collection layer, configure operational target date frames, and tap [Search Data Products].</span>
-                    </li>
-                    <li style="margin-bottom: 8px;"><b>Step 3: Select Asset and Download</b>
-                        <br/><span style="color: #555555; font-size: 12px;">Highlight rows in the catalog registry table, determine your desired data type component, define a local storage output path, and click [Download and Load into Canvas].</span>
-                    </li>
-                    <li style="margin-bottom: 8px;"><b>Step 4: Execute Core Scientific Engines (Analysis Tab)</b>
-                        <br/><span style="color: #555555; font-size: 12px;"><b>Left Side (Hotspot Analysis):</b> Left Side (Hotspot Analysis): Scans the active raster layer to dynamically generate verified emission core polygons based on your specified ppm.m adaptive concentration thresholds and automatic GDAL Sieve noise filtering.</span>
-                        <br/><span style="color: #555555; font-size: 12px;"><b>Right Side (Plume Environmental Impact Analysis):</b> Reads the extracted plume vector boundaries, evaluates them against a continuous 12-point multi-criteria risk index, updates the layer's internal attribute database tables, and creates a report for institutional workflows.</span>
-                    </li>
-                </ul>
-
-                <hr style="border: 0; border-top: 1px solid #eeeeee; margin-top: 25px; margin-bottom: 15px;"/>
-                <p style="color: #777777; font-size: 11px; text-align: center; margin: 0;">
-                    <b>Academic Project / Institutional Operations Support Contact:</b> If you experience unexpected exceptions, check the QGIS log panels or coordinate with your university laboratory supervisor.
+                <p>
+                Welcome to the Carbon Mapper Data Exploration Plugin. This plugin integrates the
+                <b>Carbon Mapper STAC API</b> and <b>Carbon Mapper Data API</b>, allowing users to
+                search, download and analyze methane (CH4) and carbon dioxide (CO2) plume datasets
+                directly inside QGIS.
                 </p>
+
+                <h3 style="color:#1a365d; font-size:14px; margin-top:20px; margin-bottom:8px; font-weight:bold;">
+                1. Requirements
+                </h3>
+
+                <ul style="padding-left:20px;">
+                    <li><b>QGIS:</b> Version 3.22 or higher.</li>
+                    <li><b>Internet Connection:</b> Required to access Carbon Mapper services.</li>
+                    <li><b>Python Package:</b></li>
+                </ul>
+
+                <code style="background:#f5f5f5; padding:5px 8px; border:1px solid #dddddd; border-radius:3px;">
+                pip install requests
+                </code>
+
+                <h3 style="color:#1a365d; font-size:14px; margin-top:20px; margin-bottom:8px; font-weight:bold;">
+                2. About the Plugin
+                </h3>
+
+                <p>
+                The plugin provides an easy-to-use interface for exploring Carbon Mapper datasets.
+                It combines the official STAC API and Data API to support data discovery,
+                visualization and statistical analysis within QGIS.
+                </p>
+
+                <ul style="padding-left:20px;">
+                    <li>Search Carbon Mapper collections</li>
+                    <li>Search plume and source records</li>
+                    <li>Download raster and vector assets</li>
+                    <li>Display plume and source locations on the map</li>
+                    <li>Compare multiple geographic regions statistically</li>
+                    <li>Export comparison results as CSV</li>
+                </ul>
+
+                <h3 style="color:#1a365d; font-size:14px; margin-top:20px; margin-bottom:8px; font-weight:bold;">
+                    3. How to Get Your API Token
+                </h3>
+
+                <p>
+                    Some plugin functions that access the <b>Carbon Mapper STAC API</b>,
+                    such as downloading protected assets, require a valid personal API token.
+                    Follow these steps to obtain one:
+                </p>
+
+                <ol style="padding-left:20px;">
+
+                    <li style="margin-bottom:6px;">
+                        Visit the Carbon Mapper data portal:
+                        <a href="https://data.carbonmapper.org" style="color:#0066cc;">
+                            https://data.carbonmapper.org
+                        </a>
+                    </li>
+
+                    <li style="margin-bottom:6px;">
+                        Sign in or create a Carbon Mapper account.
+                    </li>
+
+                    <li style="margin-bottom:6px;">
+                        Open your <b>User Profile</b> or
+                        <b>Developer Settings</b>.
+                    </li>
+
+                    <li style="margin-bottom:6px;">
+                        Navigate to the <b>API Keys</b> section and generate a new access token.
+                    </li>
+
+                    <li style="margin-bottom:6px;">
+                        Copy the generated Bearer Token.
+                    </li>
+
+                    <li style="margin-bottom:6px;">
+                        Paste the token into the
+                        <b>Token</b> field in the plugin before downloading protected assets.
+                    </li>
+
+                </ol>
+
+                <div style="background-color:#f9f9f9;
+                            border:1px solid #dddddd;
+                            padding:10px;
+                            margin:15px 0;
+                            border-radius:4px;
+                            font-size:12px;">
+
+                <b>Note:</b>
+
+                The <b>Carbon Mapper Data API</b> used by the Statistical Comparison Tool and
+                other metadata queries does <b>not</b> require an API token.
+
+                Only operations that access protected resources through the
+                <b>Carbon Mapper STAC API</b> require authentication.
+
+                </div>
+
+                <h3 style="color:#1a365d; font-size:14px; margin-top:20px; margin-bottom:8px; font-weight:bold;">
+                    4. Using the Plugin
+                </h3>
+
+                <ul style="list-style-type:square; padding-left:20px;">
+
+                    <li style="margin-bottom:10px;">
+                        <b>Area of Interest</b><br/>
+                        <span style="color:#555555; font-size:12px;">
+                            Define an Area of Interest using either the current QGIS map canvas extent
+                            , manually entered bounding box coordinates, or using a vector layer as geojson or shapefile.
+                        </span>
+                    </li>
+
+                    <li style="margin-bottom:10px;">
+                        <b>Download</b><br/>
+                        <span style="color:#555555; font-size:12px;">
+                            Search Carbon Mapper datasets using the STAC API, choose available assets
+                            and download them directly into your QGIS project.
+                        </span>
+                    </li>
+
+                    <li style="margin-bottom:10px;">
+                        <b>Analysis</b><br/>
+                        <span style="color:#555555; font-size:12px;">
+                            Compare two or more regions by selecting a polygon layer, an attribute field,
+                            gas type and date range. Results are displayed in a statistics table and can
+                            be exported as CSV.
+                        </span>
+                    </li>
+
+                </ul>
+
+                <h3 style="color:#1a365d; font-size:14px; margin-top:20px; margin-bottom:8px; font-weight:bold;">
+                    5. Statistical Comparison Tool
+                </h3>
+
+                <p>
+                    The Statistical Comparison Tool calculates the following statistics for each selected region:
+                </p>
+
+                <ul style="padding-left:20px;">
+                    <li>Number of Plumes</li>
+                    <li>Number of Emission Records</li>
+                    <li>Mean Emission (kg/hr)</li>
+                    <li>Median Emission (kg/hr)</li>
+                    <li>Minimum Emission (kg/hr)</li>
+                    <li>Maximum Emission (kg/hr)</li>
+                    <li>Standard Deviation (kg/hr)</li>
+                </ul>
+
+                <h3 style="color:#1a365d; font-size:14px; margin-top:20px; margin-bottom:8px; font-weight:bold;">
+                    6. Supported Services
+                </h3>
+
+                <ul style="padding-left:20px;">
+                    <li>Carbon Mapper STAC API</li>
+                    <li>Carbon Mapper Data API</li>
+                </ul>
+
+                <div style="background-color:#f9f9f9; border:1px solid #dddddd; padding:10px; margin-top:20px; border-radius:4px; font-size:12px;">
+                    <b>Tip:</b> Large searches may take longer depending on the selected area and date
+                    range. Narrowing the Area of Interest or reducing the date interval can improve
+                    performance.
+                </div>
+
+                <div style="background-color:#f9f9f9;
+                            border:1px solid #dddddd;
+                            padding:10px;
+                            margin-top:20px;
+                            border-radius:4px;
+                            font-size:12px;">
+
+                <b>Data Attribution</b><br/>
+
+                This plugin provides access to publicly available Carbon Mapper datasets through the official Carbon Mapper APIs.
+                Users should acknowledge Carbon Mapper as the data provider when publishing analyses, maps or other derivative works based on these datasets.
+                For licensing and usage conditions, please refer to the official Carbon Mapper Terms of Use.
+                </div>
+
+                <p style="font-size:12px;">
+                <b>Terms of Use:</b>
+                <a href="https://carbonmapper.org/terms">
+                https://carbonmapper.org/terms
+                </a>
+                </p>
+
+                <hr style="border:0; border-top:1px solid #eeeeee; margin-top:25px; margin-bottom:15px;"/>
+
+                <p style="color:#777777; font-size:11px; text-align:center; margin:0;">
+                <b>Developed by:</b><br/>
+                Yaser Enes Akan<br/>
+                Politecnico di Milano<br/><br/>
+                Carbon Mapper Data Exploration Tool v1.0.0
+                </p>
+                
             </div>
             """
             help_browser.setHtml(help_text)
