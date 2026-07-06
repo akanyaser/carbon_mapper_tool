@@ -9,9 +9,150 @@ to the user's Downloads folder so they can be loaded by QGIS afterward.
 
 import os
 import requests
-from qgis.PyQt.QtWidgets import QMessageBox
+import csv
+from io import StringIO
 
-SEARCH_URL = "https://api.carbonmapper.org/api/v1/stac/search"
+SEARCH_URL = (
+    "https://api.carbonmapper.org/api/v1/stac/search"
+)
+
+def search_plume_csv(
+        gas=None,
+        bbox=None,
+        datetime_range=None,
+        limit=500,
+        offset=0
+):
+    url = (
+        "https://api.carbonmapper.org/api/v1/catalog/plume-csv"
+    )
+
+    params = [
+        ("limit", limit),
+        ("offset", offset)
+    ]
+    
+    if gas and gas.lower() != "all":
+        params.append(
+            ("plume_gas", gas.upper())
+        )
+    
+    #AOI
+    if bbox and len(bbox) ==4:
+
+        xmin, ymin, xmax, ymax = bbox
+
+        params.extend([
+            ("bbox", xmin),
+            ("bbox", ymin),
+            ("bbox", xmax),
+            ("bbox", ymax)
+        ])
+    
+    #datetime
+    if datetime_range:
+        params.append(
+            ("datetime", datetime_range)
+        )
+
+    r = requests.get(
+        url,
+        params=params,
+        timeout=60
+    )
+
+    print("REQUEST URL:")
+    print(r.url)
+
+    if r.status_code != 200:
+        raise Exception(
+            f"Data API error: {r.status_code}"
+        )
+    
+    csv_reader = csv.DictReader(
+        StringIO(r.text)
+    )
+
+    rows = list(csv_reader)
+
+    if rows:
+        print("FIRST RECORD:")
+        print(rows[0])
+
+    print(
+        f"Data API returned {len(rows)} plume records."
+    )
+
+    return rows
+
+def search_sources_csv(
+        bbox=None,
+        limit=50,
+        gas=None,
+        datetime_range=None
+):
+    url = (
+        "https://api.carbonmapper.org/api/v1/catalog/sources-csv"
+    )
+
+    params = []
+    
+    params.append(
+        ("limit", limit)
+    )
+
+    if gas and gas.lower() != "all":
+        params.append(
+            ("plume_gas", gas.upper())
+        )
+    
+    #AOI
+    if bbox and len(bbox) ==4:
+
+        xmin, ymin, xmax, ymax = bbox
+
+        params.extend([
+            ("bbox", xmin),
+            ("bbox", ymin),
+            ("bbox", xmax),
+            ("bbox", ymax)
+        ])
+
+    #datetime
+    if datetime_range:
+        params.append(
+            ("datetime", datetime_range)
+        )
+
+    r = requests.get(
+        url,
+        params=params,
+        timeout=30
+    )
+
+    print("REQUEST URL:")
+    print(r.url)
+
+    if r.status_code != 200:
+        raise Exception(
+            f"Data API error: {r.status_code}"
+        )
+    
+    csv_reader = csv.DictReader(
+        StringIO(r.text)
+    )
+
+    rows = list(csv_reader)
+
+    #UI Limit
+    if limit:
+        rows = rows[:limit] 
+
+    print(
+        f"Data API returned {len(rows)} source records."
+    )
+
+    return rows
 
 def search_data(collection, bbox, datetime_range, limit=10, token=""):
     """
@@ -44,47 +185,222 @@ def search_data(collection, bbox, datetime_range, limit=10, token=""):
     except Exception as e:
         # Hatayı plugin.py yakalasın diye yukarı fırlatıyoruz
         raise Exception(f"Search failed: {str(e)}")
+    
+def get_source_plumes(
+        source_name,
+        limit=10
+):
+    
+    """
+    Returns plume records belonging to a source.
+    """
+    url = (
+        "https://api.carbonmapper.org/api/v1/catalog/"
+        f"source-plumes-csv/{source_name}"
+    )
+
+    params = {
+        "limit": limit
+    }
+
+    r = requests.get(
+        url,
+        params=params,
+        timeout=30
+    )
+
+    print("REQUEST URL:")
+    print(r.url)
+
+    if r.status_code != 200:
+        raise Exception(
+            f"Source plume API error: {r.status_code}"
+        )
+    
+    csv_reader = csv.DictReader(
+        StringIO(r.text)
+    )
+
+    rows = list(csv_reader)
+
+    print(
+        f"Returned {len(rows)} plume records."
+    )
+
+    if rows:
+        print("FIRST PLUME:")
+        print(rows[0])
+
+        print("AVAILABLE COLUMNS:")
+        print(rows[0].keys())
+
+    return rows
+
+def get_all_plumes(
+        bbox=None,
+        gas=None,
+        datetime_range=None
+):
+    all_rows = []
+    offset = 0
+    limit = 500
+
+    while True:
+        rows = search_plume_csv(
+            bbox=bbox,
+            gas=gas,
+            datetime_range=datetime_range,
+            limit=limit,
+            offset=offset
+        )
+
+        if not rows:
+            break
+
+        all_rows.extend(rows)
+
+        print(
+            f"Downloaded {len(rows)} rows "
+            f"(offset={offset})"
+        )
+
+        if len(rows) < limit:
+            break
+        
+        offset += limit
+
+    print(
+        f"TOTAL ROWS: {len(all_rows)}"
+    )
+
+    return all_rows
 
 
-def download_asset(feature, token, asset_name="cmf.tif", index=0, output_dir=""):
+def download_asset(feature, token="", asset_name="con_tif", index=0, output_dir=""):
     """
     Saves the selected asset file to the download folder (output_dir) specified by the user.
+    Optimized for Data API Signed URLs without broken standalone calls.
     """
     try:
-        assets = feature.get("assets", {})
-        if asset_name not in assets:
-            return None
 
-        download_url = assets[asset_name].get("href")
+        # ----------------------------------
+        # Data API URL
+        # ----------------------------------
+
+        download_url = feature.get(
+            asset_name
+        )
+
         if not download_url:
-            return None
+            print(
+                f"{asset_name} URL not found."
+            )
 
-        headers = {"Authorization": f"Bearer {token}"}
-        # stream=True allows large map files to be downloaded in chunks without bloating memory.
-        response = requests.get(download_url, headers=headers, stream=True)
+            return None
         
+        print(f"Starting download: "
+              f"{download_url[:80]}..."
+        )
+
+        # ----------------------------------
+        # Download
+        # ----------------------------------
+
+        response = requests.get(
+            download_url,
+            stream=True,
+            timeout=60
+        )
+
         if response.status_code != 200:
+            print(
+                f"Download failed: "
+                f"{response.status_code}"
+            )
+
             return None
+        
+        # ----------------------------------
+        # File Extension
+        # ----------------------------------
 
-        #  IF THE USER SELECTS A FOLDER, SAVE THE FINDINGS THERE; IF NOT, SAVE TO THE DEFAULT LOCATION.
-        if output_dir and os.path.exists(output_dir):
-            # Specify the file name (we add feature_id and index to avoid conflicts)
-            file_name = f"{feature.get('id', 'asset')}_{index}_{asset_name}"
-            save_path = os.path.join(output_dir, file_name)
+        if asset_name.endswith("_tif"):
+            ext = ".tif"
+
+        elif asset_name.endswith("_png"):
+            ext = ".png"
+
+        elif asset_name.endswith("_json"):
+            ext = ".json"
+
         else:
-            # Backup plan: We are targeting the "Downloads" folder in the user's Windows profile.
-            downloads_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-            file_name = f"feature_{index}_{asset_name}"
-            save_path = os.path.join(downloads_dir, file_name)
+            ext = ""
 
-        # We are writing the file to the disk in parts.
-        with open(save_path, 'wb') as f:
-            # We conserve RAM by writing to disk in blocks of 8192 bytes.
-            for chunk in response.iter_content(chunk_size=8192):
+        # ----------------------------------
+        # File Name
+        # ----------------------------------
+
+        feature_id = feature.get(
+            "plume_id",
+            feature.get(
+                "source_name",
+                f"asset_{index}"
+            )
+        )
+
+        file_name = (
+            f"{feature_id}_{asset_name}{ext}"
+        )
+
+        # ----------------------------------
+        # Output Directory
+        # ----------------------------------
+
+        if (
+            output_dir
+            and os.path.exists(output_dir)
+        ):
+            save_path = os.path.join(
+                output_dir,
+                file_name
+            )
+
+        else:
+            downloads_dir = os.path.join(
+                os.path.expanduser("~"),
+                "Downloads"
+            )
+
+            save_path = os.path.join(
+                downloads_dir,
+                file_name
+            )
+        
+        # ----------------------------------
+        # Save
+        # ----------------------------------
+
+        with open(save_path, "wb") as f:
+            for chunk in response.iter_content(
+                chunk_size=8192
+            ):
                 if chunk:
                     f.write(chunk)
+        
+        print(
+            f"SUCCESS: {save_path}"
+        )
 
-        return save_path # We return the full downloaded file path so that QGIS can load it as a layer.
-
+        return save_path
+    
     except Exception as e:
+        print(
+            f"download_asset error: {e}"
+        )
+
         return None
+
+
+    
+
+            

@@ -9,16 +9,20 @@ selected assets, and loads raster outputs into QGIS when applicable.
 """
 
 import os
-import numpy as np
 import requests
+import json
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import QObject, QEvent
-from qgis.PyQt.QtWidgets import QDialog, QTableWidgetItem, QMessageBox, QComboBox, QPushButton, QLineEdit, QRadioButton, QFileDialog, QTextEdit, QTabWidget, QDateEdit
+from qgis.PyQt.QtWidgets import QDialog, QApplication, QTableWidgetItem, QMessageBox, QComboBox, QFileDialog, QTabWidget, QDateEdit, QLabel, QGroupBox, QToolButton
 from qgis.gui import QgsMapToolExtent
 from qgis.core import Qgis, QgsPointXY, QgsRectangle, QgsProject, QgsRasterLayer, QgsVectorLayer, QgsFeature, QgsGeometry, QgsPoint, QgsMapLayer
+from qgis.core import (
+    QgsWkbTypes,
+    QgsField
+)
+from qgis.PyQt.QtCore import QVariant
 
-from .analysis import AnalysisManager
-from .plume_environment_analysis import PlumeEnvironmentalAnalysisManager
+from .statistical_tool import StatisticalComparisonManager
+from .help_messages import HelpMessages
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'widget.ui'))
 
@@ -31,22 +35,262 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
         self.features = []
         self.map_tool = None
         self.all_collections = []  # Raw collection list from the live API
-        self.assets_cache = {}  # Asset cache
+        self.source_features = []
+        self.source_plume_map = {}
+        self.assets_cache = {} # Asset cache
+        self.plume_asset_cache = {} 
 
         self.setupUi(self)  # Load the interface
    
-        self.setWindowTitle("Carbon Mapper Tool")
+        self.setWindowTitle("Carbon Mapper Data Explorer")
+        self.help_messages = HelpMessages(self)
+
+        self.groupBox_data_api = self.findChild(
+            QGroupBox,
+            "groupBox_data_api"
+        )
+
+        self.groupBox_stac_api = self.findChild(
+            QGroupBox,
+            "groupBox_stac_api"
+        )
+
+        self.stac_combo_gas = self.findChild(
+            QComboBox,
+            "stac_combo_gas"
+        )
+
+        self.stac_combo_level = self.findChild(
+            QComboBox,
+            "stac_combo_level"
+        )
+
+        self.stac_combo_asset = self.findChild(
+            QComboBox,
+            "stac_combo_asset"
+        )
+
+        self.stac_asset_type_label = self.findChild(
+            QLabel,
+            "stac_api_asset_type_label"
+        )
+
+        self.stac_gas_label = self.findChild(
+            QLabel,
+            "stac_gas_type_label"
+        )
+
+        self.level_label = self.findChild(
+            QLabel,
+            "level_label"
+        )
+
+        self.data_asset_type_label = self.findChild(
+            QLabel,
+            "label_3"
+        )
+
+        self.token_label = self.findChild(
+            QLabel,
+            "label"
+        )
+
+        self.data_type_label = self.findChild(
+            QLabel,
+            "label_17"
+        )
        
-        # STARTING TWO SEPARATE ANALYSIS MANAGERS
-        self.analysis_manager = AnalysisManager(self)
-        self.plume_manager = PlumeEnvironmentalAnalysisManager(self)
+        self.stac_combo_collection = self.findChild(
+           QComboBox,
+           "stac_combo_collection"
+        )
+
+        self.stac_collection_label = self.findChild(
+            QLabel,
+            "collection_combo_label"
+        )
+
+        self.btn_info_data_type = self.findChild(
+            QToolButton,
+            "btn_info_data_type"
+        )
+
+        self.btn_info_gas = self.findChild(
+            QToolButton,
+            "btn_info_gas"
+        )
+
+        self.btn_info_asset = self.findChild(
+            QToolButton,
+            "btn_info_asset"
+        )
+
+        self.btn_info_stac_gas = self.findChild(
+            QToolButton,
+            "btn_info_stac_gas"
+        )
+        
+        self.btn_info_level = self.findChild(
+            QToolButton,
+            "btn_info_level"
+        )
+
+        self.btn_info_collection = self.findChild(
+            QToolButton,
+            "btn_info_collection"
+        )
+
+        self.btn_info_stac_asset = self.findChild(
+            QToolButton,
+            "btn_info_stac_asset"
+        )
+
+        self.lbl_token_help = self.findChild(
+            QLabel,
+            "lbl_token_help"
+        )
+
+        self.btn_info_nor = self.findChild(
+            QToolButton,
+            "btn_info_nor"
+        )
+
+        self.btn_info_points = self.findChild(
+            QToolButton,
+            "btn_info_points"
+        )
+
+        self.btn_quick_tip = self.findChild(
+            QToolButton,
+            "btn_quick_tip"
+        )
+
+        self.btn_info_api_type = self.findChild(
+            QToolButton,
+            "btn_info_api_type"
+        )
+
+        info_buttons = [
+            self.btn_info_data_type,
+            self.btn_info_gas,
+            self.btn_info_asset,
+            self.btn_info_stac_gas,
+            self.btn_info_level,
+            self.btn_info_collection,
+            self.btn_info_stac_asset,
+            self.btn_info_nor,
+            self.btn_info_points,
+            self.btn_info_api_type
+        ]
+
+        for button in info_buttons:
+            button.setText("ⓘ")
+
+            button.setToolTip(
+                "Show information"
+            )
+
+            button.setStyleSheet("""
+                            QToolButton {
+                                border: none;
+                                background: transparent;
+                                color: #2A6FD6;
+                                font-size: 14px;
+                                font-weight: bold;
+                            }
+                            
+                            QToolButton:hover {
+                                color: #0055CC;
+                            }
+                                 
+                            QToolButton:pressed {
+                                color: #003C8F;
+                            }
+            """)
+                                 
+
+        self.btn_info_data_type.clicked.connect(
+            self.help_messages.show_data_type_info
+        )
+
+        self.btn_info_gas.clicked.connect(
+            self.help_messages.show_gas_info
+        )
+
+        self.btn_info_asset.clicked.connect(
+            self.help_messages.show_asset_info
+        )
+
+        self.btn_info_stac_gas.clicked.connect(
+            self.help_messages.show_stac_gas_info
+        )
+
+        self.btn_info_level.clicked.connect(
+            self.help_messages.show_level_info
+        )
+
+        self.btn_info_collection.clicked.connect(
+            self.help_messages.show_collection_info
+        )
+
+        self.btn_info_stac_asset.clicked.connect(
+            self.help_messages.show_stac_asset_info
+        )
+
+        self.btn_info_nor.clicked.connect(
+            self.help_messages.show_records
+        )
+
+        self.btn_info_points.clicked.connect(
+            self.help_messages.show_add_points
+        )
+
+        self.lbl_token_help.linkActivated.connect(
+            self.open_token_help
+        )
+
+        self.btn_info_api_type.clicked.connect(
+            self.help_messages.show_api_type_info
+        )
+
+        self.btn_quick_tip.clicked.connect(
+            self.help_messages.show_quick_tip
+        )
+
+
+        # STARTING COMPARISON MANAGER
+        self.statistical_manager = StatisticalComparisonManager(self)
 
         self.setup_ui_defaults()
         self.setup_three_level_comboboxes()
-        self.collection_combo.currentIndexChanged.connect(
+        self.update_api_mode()
+        self.combo_data_type.currentIndexChanged.connect(
+            self.update_table_headers
+        )
+
+        self.combo_api.currentIndexChanged.connect(
+            self.update_api_mode
+        )
+
+        self.combo_data_type.currentIndexChanged.connect(
+            self.update_asset_type_visibility
+        )
+
+        self.stac_combo_gas.currentIndexChanged.connect(
+            self.filter_collections
+        )
+
+        self.stac_combo_level.currentIndexChanged.connect(
+            self.filter_collections
+        )
+
+        self.stac_combo_collection.currentIndexChanged.connect(
             self.update_assets_for_collection
         )
 
+        self.update_asset_type_visibility()
+        self.combo_aoi_layer.hide()
+    
         # Basic Element Links (AOI & Download Tabs)
         if hasattr(self, 'search_btn') and self.search_btn:
             self.search_btn.clicked.connect(self.handle_search)
@@ -59,6 +303,7 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
         if hasattr(self, 'radio_canvas_aoi') and hasattr(self, 'radio_custom_aoi'):
             self.radio_canvas_aoi.toggled.connect(self.toggle_aoi_mode)
             self.radio_custom_aoi.toggled.connect(self.toggle_aoi_mode)
+            self.radio_layer_aoi.toggled.connect(self.toggle_aoi_mode)
 
         #  Tab Switching Buttons Links
         if hasattr(self, 'next_btn') and self.next_btn:
@@ -95,31 +340,52 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
         # In QGIS Layer Changes, we refresh the lists for both managers.
         QgsProject.instance().layersAdded.connect(self.refresh_all_analysis_combos)
         QgsProject.instance().layersRemoved.connect(self.refresh_all_analysis_combos)
+        QgsProject.instance().layersAdded.connect(
+            self.refresh_aoi_layers
+        )
+        QgsProject.instance().layersRemoved.connect(
+            self.refresh_aoi_layers
+        )
+
+        #Opening the Related Plumes after clicking the source lines
+        if hasattr(self, "products_table") and self.products_table:
+            self.products_table.cellDoubleClicked.connect(
+                self.open_source_plumes
+            )
+        
+        if hasattr(self, 'btn_back_to_sources'):
+            self.btn_back_to_sources.clicked.connect(
+                self.back_to_sources
+            )
+            self.btn_back_to_sources.hide()
+        
+        if hasattr(self, "load_features_btn") and self.load_features_btn:
+            self.load_features_btn.clicked.connect(
+                self.load_selected_features_to_qgis
+            )
 
         # We trigger the interface to automatically populate the lists when it loads for the first time.
         self.refresh_all_analysis_combos()
+        self.refresh_aoi_layers()
 
-    # DYNAMIC LIVE API AND CHAINED FILTERING LOGIC
     def setup_three_level_comboboxes(self):
         try:
-            url = "https://api.carbonmapper.org/api/v1/stac/collections"
-            response = requests.get(url, timeout=20)
-            if response.status_code != 200:
-                return
-            
-            data = response.json()
-            self.all_collections = []
+            # --------------------------------------------------
+            # DATA TYPE
+            # --------------------------------------------------
+            if hasattr(self, "combo_data_type"):
+                self.combo_data_type.blockSignals(True)
+                self.combo_data_type.clear()
+                self.combo_data_type.addItems([
+                    "Plumes",
+                    "Sources"
+                ])
+                self.combo_data_type.blockSignals(False)
+                self.update_table_headers()
 
-            for collection in data.get("collections", []):
-                coll_id = collection.get("id")
-
-                if coll_id:
-                    self.all_collections.append(coll_id)
-
-            print("Bulunan collectionlar:")
-            print(self.all_collections)
-
+            # --------------------------------------------------
             # GAS
+            # --------------------------------------------------
             if hasattr(self, "combo_gas"):
                 self.combo_gas.blockSignals(True)
                 self.combo_gas.clear()
@@ -128,129 +394,231 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
                     "CH4",
                     "CO2"
                 ])
-            
                 self.combo_gas.blockSignals(False)
 
+            if hasattr(self, "stac_combo_gas"):
+                self.stac_combo_gas.blockSignals(True)
+                self.stac_combo_gas.clear()
+                self.stac_combo_gas.addItems([
+                    "All",
+                    "CH4",
+                    "CO2"
+                ])
+                self.stac_combo_gas.blockSignals(False)
+
+
+            # --------------------------------------------------
             # LEVEL
-            if hasattr(self, "combo_level"):
-                self.combo_level.blockSignals(True)
-                self.combo_level.clear()
-                self.combo_level.addItems([
+            # --------------------------------------------------
+            if hasattr(self, "stac_combo_level"):
+                self.stac_combo_level.blockSignals(True)
+                self.stac_combo_level.clear()
+                self.stac_combo_level.addItems([
                     "All",
                     "L2",
                     "L3",
                     "L4"
                 ])
+                self.stac_combo_level.blockSignals(False)
 
-                self.combo_level.blockSignals(False)
-            
-            try:
-                self.combo_gas.currentIndexChanged.disconnect()
-            except:
-                pass
-            
-            try:
-                self.combo_level.currentIndexChanged.disconnect()
-            except:
-                pass
-            
-            self.combo_gas.currentIndexChanged.connect(
-                self.filter_collections
-            )
-
-            self.combo_level.currentIndexChanged.connect(
-                self.filter_collections
-            )
-
-            self.filter_collections()
-        
         except Exception as e:
             print(f"setup_three_level_comboboxes error: {e}")
+        
+        # STAC collections
+        try:
+            url = "https://api.carbonmapper.org/api/v1/stac/collections"
+            response = requests.get(
+                url,
+                timeout=20
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                print(f"Loaded {len(data.get('collections', []))} STAC collections")
+                self.all_collections = []
+                
+                for collection in data.get(
+                    "collections",
+                    []
+                ):
+                    coll_id = collection.get("id")
+
+                    if coll_id:
+                        self.all_collections.append(
+                            coll_id
+                        )
+                self.filter_collections()
+        
+        except Exception as e:
+            print(
+                f"Collection loading failed: {e}"
+            )
+           
 
     def filter_collections(self):
-        if not hasattr(self, "collection_combo"):
+
+        if self.combo_api.currentText() != "STAC API":
             return
         
-        selected_gas = self.combo_gas.currentText().lower()
-        selected_level = self.combo_level.currentText().lower()
+        if not hasattr(self, "stac_combo_collection"):
+            return
+        
+        selected_gas = self.stac_combo_gas.currentText().lower()
+        selected_level = self.stac_combo_level.currentText().lower()
 
-        self.collection_combo.clear()
+        self.stac_combo_collection.blockSignals(True)
+        self.stac_combo_collection.clear()
 
         for coll in self.all_collections:
-            # Performing a string check to prevent the code from breaking.
             coll_lower = coll.lower()
             
-            # First step is checking the gas
-            # The selected gas will match if it is "all" or if it appears in the collection name (e.g., CH4 or CO2).
+            # Gaz Kontrolü
             gas_match = (
                 selected_gas == "all"
                 or selected_gas in coll_lower
             )
 
-            # Second step is checking the product level
-            # Matches if the selected level is "all" or if the collection name starts with that level (l2 or l3)
+            # Seviye Kontrolü
             level_match = (
                 selected_level == "all"
                 or coll_lower.startswith(selected_level)
             )
 
-            # Third step is adding to the combo
             if gas_match and level_match:
                 display_name = coll
-                self.collection_combo.addItem(
+                self.stac_combo_collection.addItem(
                     display_name,
                     coll
                 )
 
+        self.stac_combo_collection.blockSignals(False)
+
+       # After filtering the STAC collections, automatically update the available assets
+        if self.stac_combo_collection.count() > 0:
+            self.stac_combo_collection.setCurrentIndex(0)
+            self.update_assets_for_collection()
+        else:
+            self.stac_combo_asset.clear()
+            self.stac_combo_asset.addItem("No assets available")
+
+
     def update_assets_for_collection(self):
-        collection_id = self.collection_combo.currentData()
+
+        self.stac_combo_asset.clear()
+
+        # This function is only used by STAC API
+        if self.combo_api.currentText() != "STAC API":
+            return
+        
+        collection_id = self.stac_combo_collection.currentText()
+
         if not collection_id:
             return
+        
+        self.stac_combo_asset.clear()
 
-        self.asset_combo.clear()
-
-        # If caching exists, do not make an API call.
+        # cache
         if collection_id in self.assets_cache:
-            self.asset_combo.addItems(self.assets_cache[collection_id])
+            self.stac_combo_asset.addItems(
+                self.assets_cache[collection_id]
+            )
             return
-
+        
         try:
-            search_url = "https://api.carbonmapper.org/api/v1/stac/search"
+            search_url = (
+                "https://api.carbonmapper.org/api/v1/stac/search"
+            )
 
             payload = {
                 "collections": [collection_id],
-                "limit": 1
+                "limit": 20
             }
 
             response = requests.post(
                 search_url,
                 json=payload,
-                timeout=20
+                timeout=30
             )
 
             if response.status_code != 200:
+                self.stac_combo_asset.addItem(
+                    "No assets available"
+                )
                 return
-
-            data = response.json()
-            features = data.get("features", [])
+            
+            features = response.json().get(
+                "features",
+                []
+            )
 
             if not features:
-                self.asset_combo.addItem("No assets available")
-                self.assets_cache[collection_id] = ["No assets available"]
-                return
+                 self.stac_combo_asset.addItem(
+                     "There are no downloadable assets"
+                 )
 
-            assets = features[0].get("assets", {})
+                 self.assets_cache[
+                     collection_id
+                 ] = ["There are no downloadable assets"]
 
-            if assets:
-                asset_names = sorted(assets.keys())
-                self.asset_combo.addItems(asset_names)
-                self.assets_cache[collection_id] = asset_names
-            else:
-                self.asset_combo.addItem("No assets available")
-                self.assets_cache[collection_id] = ["No assets available"]
+                 return
+            
+            # Search all returned features until one contains assets
+            for i, feature in enumerate(features):
+                assets = feature.get(
+                    "assets",
+                    {}
+                )
+
+                if assets:
+                    asset_names = sorted(
+                        assets.keys()
+                    )
+
+                    self.stac_combo_asset.addItems(
+                        asset_names
+                    )
+
+
+                    self.assets_cache[
+                        collection_id
+                    ] = asset_names
+
+                    return
+                
+            # No feature contained assets
+            print("No feature contains assets.")
+            self.stac_combo_asset.addItem(
+                "There are no downloadable assets"
+            )
+
+            self.assets_cache[
+                collection_id
+            ] = ["There are no downloadable assets"]
 
         except Exception as e:
-            print(f"Asset loading error: {e}")
+
+            print(
+                f"Asset loading error: {e}"
+            )
+    
+    def refresh_aoi_layers(self):
+        self.combo_aoi_layer.clear()
+
+        print("AOI layer list refreshed")
+
+        for layer in QgsProject.instance().mapLayers().values():
+            if not isinstance(layer, QgsVectorLayer):
+                continue
+            
+            if layer.geometryType() != QgsWkbTypes.PolygonGeometry:
+                continue
+            
+            print(layer.name())
+            
+            self.combo_aoi_layer.addItem(
+                layer.name(),
+                layer
+            )
 
     def initGui(self):
         from qgis.PyQt.QtWidgets import QAction
@@ -350,12 +718,6 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
             print("ERROR: 'txt_help_guide' not found in QTextBrowser interface!")
 
     def setup_ui_defaults(self):
-        if hasattr(self, 'collection_combo') and self.collection_combo is not None:
-            self.collection_combo.clear()
-            
-        if hasattr(self, 'asset_combo') and self.asset_combo is not None:
-            self.asset_combo.clear()
-            self.asset_combo.addItems(["cmf.tif", "data.tif", "browse.png", "metadata.json", "plume.geojson"])
 
         if hasattr(self, 'start_date_edit') and isinstance(self.start_date_edit, QDateEdit):
             self.start_date_edit.setCalendarPopup(True)
@@ -363,8 +725,7 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
             self.end_date_edit.setCalendarPopup(True)
 
         if hasattr(self, 'products_table') and self.products_table:
-            self.products_table.setColumnCount(4)
-            self.products_table.setHorizontalHeaderLabels(["Feature ID", "Product Level", "Acquisition Date", "Status"])
+            self.update_table_headers()
             self.products_table.horizontalHeader().setStretchLastSection(True)
 
         if hasattr(self, 'toggle_aoi_mode'):
@@ -374,7 +735,18 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
             self.progress_bar.setMinimum(0)
             self.progress_bar.setMaximum(100)
             self.progress_bar.setValue(0)  
+        
+        if hasattr(self, "combo_api"):
 
+            self.combo_api.clear()
+
+            self.combo_api.addItems([
+                "Data API",
+                "STAC API"
+            ])
+            self.combo_api.setCurrentIndex(0)
+            print(self.combo_api.count())
+            
         self.refresh_all_analysis_combos()
 
     def refresh_all_analysis_combos(self):
@@ -406,18 +778,82 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
                 return
         if self.main_tab_widget: self.main_tab_widget.setCurrentIndex(1)
 
+        self.update_api_mode()
+
     def switch_to_analysis_tab(self):
         if self.main_tab_widget:
             self.main_tab_widget.setCurrentIndex(2)
             self.refresh_all_analysis_combos()
 
     def toggle_aoi_mode(self):
-        if hasattr(self, 'radio_canvas_aoi') and self.radio_canvas_aoi and self.radio_canvas_aoi.isChecked():
-            if hasattr(self, 'aoi_btn') and self.aoi_btn: self.aoi_btn.setEnabled(True)
+        #Canvas AOI
+        if self.radio_canvas_aoi.isChecked():
+            self.aoi_btn.setEnabled(True)
             self.set_coordinate_fields_editable(False)
+            self.combo_aoi_layer.hide()
+
+        #Layer AOI
+        elif self.radio_layer_aoi.isChecked():
+            self.aoi_btn.setEnabled(False)
+            self.set_coordinate_fields_editable(False)
+            self.combo_aoi_layer.show()
+        
+        #Custom AOI
         else:
-            if hasattr(self, 'aoi_btn') and self.aoi_btn: self.aoi_btn.setEnabled(False)
+            self.aoi_btn.setEnabled(False)
             self.set_coordinate_fields_editable(True)
+            self.combo_aoi_layer.hide()
+    
+    def update_api_mode(self):
+        """
+        Enable the correct API panel depending on the selected API.
+        """
+        if self.combo_api.count() == 0:
+            return
+        
+        use_stac = (
+            self.combo_api.currentText() == "STAC API"
+        )
+
+        # -------------------------
+        # Enable / Disable groupboxes
+        # -------------------------
+        self.groupBox_data_api.setEnabled(
+            not use_stac
+        )
+
+        self.groupBox_stac_api.setEnabled(
+            use_stac
+        )
+
+        # -------------------------
+        # Token
+        # -------------------------
+        self.token_input.setEnabled(use_stac)
+        self.token_label.setEnabled(use_stac)
+
+        if use_stac:
+            self.token_input.setPlaceholderText(
+                "Please paste your Carbon Mapper Token"
+            )
+
+            self.populate_stac_collections()
+
+        else:
+            self.token_input.clear()
+            self.token_input.setPlaceholderText(
+                "Token not required for Data API"
+            )
+
+            self.asset_combo.clear()
+            self.asset_combo.addItems([
+                "con_tif",
+                "plume_tif",
+                "plume_png",
+                "rgb_tif",
+                "rgb_png",
+            ])
+
 
     def set_coordinate_fields_editable(self, status):
         for field_name in ['txt_north', 'txt_west', 'txt_south', 'txt_east']:
@@ -441,6 +877,28 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
         self.show()
 
     def get_current_bbox(self):
+        if (
+            hasattr(self, "radio_layer_aoi")
+            and self.radio_layer_aoi.isChecked()
+        ):
+            
+            layer = self.combo_aoi_layer.currentData()
+
+            if not layer:
+                return None
+            
+            extent = layer.extent()
+            bbox = [
+                round(extent.xMinimum(), 5),
+                round(extent.yMinimum(), 5),
+                round(extent.xMaximum(), 5),
+                round(extent.yMaximum(), 5)
+            ]
+
+            print("LAYER BBOX =", bbox)
+            return bbox
+        
+            
         from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsRectangle, QgsProject
         try:
             n = float(self.txt_north.text().strip())
@@ -468,91 +926,875 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
                 return [w, s, e, n]
         else:
             return [w, s, e, n]
-
+        
     def handle_search(self):
-        # Reading the selection from the hidden API code in the background using `.currentData()`!
-        combo = getattr(self, 'collection_combo', None)
-        if not combo or combo.currentIndex() == -1:
-            QMessageBox.warning(self, "UI Error", "Collection selection error!")
-            return
-       
-        limit = self.limit_spin.value() if hasattr(self, 'limit_spin') else 10
+        if self.combo_api.currentText() == "Data API":
+            self.handle_search_data_api()
+        else:
+            self.handle_search_stac_api()
+
+    def handle_search_data_api(self):
+        limit = (
+            self.limit_spin.value()
+            if hasattr(self, 'limit_spin') 
+            else 10
+        )
+        
         bbox = self.get_current_bbox()
        
-        if hasattr(self, 'radio_custom_aoi') and self.radio_custom_aoi and self.radio_custom_aoi.isChecked():
+        if (
+            hasattr(self, 'radio_custom_aoi') 
+            and self.radio_custom_aoi 
+            and self.radio_custom_aoi.isChecked()
+        ):
+            
             if not bbox:
-                QMessageBox.warning(self, "Coordinate Error", "Please enter valid numeric values for Custom Bounding Box!")
+                QMessageBox.warning(self, 
+                                    "Coordinate Error", 
+                                    "Please enter valid numeric values for Custom Bounding Box!"
+                )
+
                 return
+            
         else:
-            if not bbox or any(v is None for v in bbox) or bbox == [0, 0, 0, 0]:
-                QMessageBox.warning(self, "Validation Error", "Please define a valid Area of Interest (AOI) on the canvas before searching!")
+            if (
+                not bbox 
+                or any(v is None for v in bbox) 
+                or bbox == [0, 0, 0, 0]
+            ):
+                QMessageBox.warning(self, 
+                                    "Validation Error", 
+                                    "Please define a valid Area of Interest (AOI) on the canvas before searching!"
+                )
+
                 return
                
-        #  Retrieving the actual API code (l2b-ch4, etc.) with `.currentData()`.
-        collection = combo.currentData() if combo.currentData() else "l2b-ch4"
-        collections_to_try = [collection]
-        if collection == "l3a-plumes":
-            collections_to_try.append("plumes")
-       
+        
         start_widget = self.findChild(QDateEdit, 'start_date_edit')
         end_widget = self.findChild(QDateEdit, 'end_date_edit')
        
         start_dt = start_widget.date().toString("yyyy-MM-dd") if start_widget else "2024-01-01"
-        end_dt = end_widget.date().toString("yyyy-MM-dd") if end_widget else "2026-01-01"
+        end_dt = end_widget.date().toString("yyyy-MM-dd") if end_widget else "2026-12-31"
         datetime_range = f"{start_dt}/{end_dt}"
 
-        token = self.token_input.text().strip() if hasattr(self, 'token_input') else ""
+        gas = self.combo_gas.currentText()
 
-        if bbox:
-            bbox = [
-                round(bbox[0] - 0.5, 5),
-                round(bbox[1] - 0.5, 5),
-                round(bbox[2] + 0.5, 5),
-                round(bbox[3] + 0.5, 5)
-            ]
+        data_type = (
+            self.combo_data_type.currentText()
+        )
 
-        from geoprojects.api.carbon_api import search_data
-       
         self.features = []
-        for coll in collections_to_try:
-            print(f"Carbon Mapper API call is being made... Package: {coll}")
-            print(f"BBOX: {bbox} |  Time Range: {datetime_range}")
-            try:
-                res = search_data(collection=coll, bbox=bbox, datetime_range=datetime_range, limit=limit, token=token)
-                if res:
-                    self.features = res
-                    collection = coll
-                    print(f" {coll} The products were successfully found in the package!")
-                    break
-            except Exception as e:
-                print(f" {coll} Search failed, trying another variation... Error: {str(e)}")
 
         try:
-            if hasattr(self, 'products_table') and self.products_table:
-                self.populate_table(self.features, collection)
-        except Exception as e:
-            QMessageBox.critical(self, "API Error", f"An error occurred while updating table:\n{str(e)}")
+            # ------------------------
+            # PLUMES
+            # ------------------------
 
-    def populate_table(self, features, collection_name):
-        self.products_table.setRowCount(0)
-        if not features:
-            QMessageBox.information(self, "No Results", "No features found for the current parameters.")
+            if data_type == "Plumes":
+                from geoprojects.api.carbon_api import (
+                    search_plume_csv
+                )
+
+                self.features = search_plume_csv(
+                    bbox=bbox,
+                    gas=gas,
+                    limit=limit,
+                    datetime_range=datetime_range
+                )
+
+            # ------------------------
+            # SOURCES
+            # ------------------------
+
+            elif data_type == "Sources":
+                from geoprojects.api.carbon_api import (
+                    search_sources_csv
+                )
+
+                from geoprojects.api.carbon_api import(
+                    get_source_plumes
+                )
+
+                self.features = search_sources_csv(
+                    bbox=bbox,
+                    gas=gas,
+                    limit=limit,
+                    datetime_range=datetime_range
+                )
+
+                self.source_features = self.features.copy()
+                self.source_plume_map = {}
+
+                for source in self.features:
+                    source_name = source["source_name"]
+
+                    plume_records = get_source_plumes(
+                        source_name,
+                        limit=100
+                    )
+
+                    plume_ids = []
+                    for plume in plume_records:
+                        plume_ids.append(
+                            plume["plume_id"]
+                        )
+                    self.source_plume_map[source_name] = plume_ids
+
+
+            print(
+                f"Returned {len(self.features)} records."
+            )
+
+            print("DATA TYPE =", data_type)
+
+            if self.features:
+                print("FIRST RECORD:")
+
+            self.populate_table(
+                self.features
+            )
+        
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Search Error",
+                str(e)
+            )
+
+    def handle_search_stac_api(self):
+
+        collection = self.stac_combo_collection.currentText()
+        if not collection:
             return
+        
+        limit = (
+            self.limit_spin.value()
+            if hasattr(self, "limit_spin")
+            else 10
+        )
+
+        bbox = self.get_current_bbox()
+
+        if (
+            hasattr(self, "radio_custom_aoi")
+            and self.radio_custom_aoi
+            and self.radio_custom_aoi.isChecked()
+        ):
+            if not bbox:
+                 QMessageBox.warning(
+                     self,
+                     "Coordinate Error",
+                     "Please enter valid numeric values for Custom Bounding Box!"
+                 )
+                 return
+            
+        else:
+            if (
+                not bbox
+                or any(v is None for v in bbox)
+                or bbox == [0, 0, 0, 0]
+            ):
+                    
+                QMessageBox.warning(
+                    self,
+                    "Validation Error",
+                    "Please define a valid AOI before searching!"
+                )
+                return
+            
+        start_widget = self.findChild(
+            QDateEdit,
+                "start_date_edit"
+        )
+
+        end_widget = self.findChild(
+            QDateEdit,
+            "end_date_edit"
+        )
+
+        start_dt = start_widget.date().toString(
+            "yyyy-MM-dd"
+        )
+
+        end_dt = end_widget.date().toString(
+            "yyyy-MM-dd"
+        )
+
+        datetime_range = (
+            f"{start_dt}/{end_dt}"
+        )
+        
+        url = "https://api.carbonmapper.org/api/v1/stac/search"
+
+        payload = {
+            "collections":[collection],
+            "bbox": bbox,
+            "datetime": datetime_range,
+            "limit": limit
+        }
+
+        response = requests.post(
+            url,
+            json=payload,
+            timeout=30
+        )  
+
+        if response.status_code != 200:
+            QMessageBox.warning(
+                self,
+                "STAC",
+                "Search failed."
+            )
+
+            return
+        
+        features = response.json().get(
+            "features",
+            []
+        )
+
+        if not features:
+            QMessageBox.information(
+                self,
+                "No results",
+                "No products found."
+            )
+            return
+        
+        table_features = []
+        for feature in features:
+
+            props = feature.get(
+                "properties",
+                {}
+            )
+
+            geometry = feature.get(
+                "geometry",
+                {}
+            )
+
+            coords = geometry.get(
+                "coordinates",
+                []
+            )
+
+            if geometry.get("type") == "Point":
+                lon = coords[0]
+                lat = coords[1]
+            else:
+                lon = coords[0][0][0]
+                lat = coords[0][0][1]
+                
+            location = f"{lat:.5f}, {lon:.5f}"
+
+            feature["plume_id"] = feature.get(
+                "id",
+                ""
+            )
+
+            feature["datetime"] = props.get(
+                "datetime",
+                ""
+            )
+
+            feature["place"] = location
+            feature["region"] = ""
+            feature["country"] = "-"
+            feature["ipcc_sector"] = props.get(
+                "cm:sector",
+                "-"
+            )
+
+            table_features.append(feature)
+
+        self.features = table_features
+        self.populate_table(
+            table_features
+        )
+
+        self.download_btn.setEnabled(True)
+                    
+    def populate_table(self, features):
+
+        self.products_table.setRowCount(0)
+
+        if self.combo_api.currentText() == "STAC API":
+            data_type = "Plumes"
+        else:
+            data_type = self.combo_data_type.currentText()
+
+        if not features:
+            QMessageBox.information(
+                self, 
+                "No Results", 
+                "No features found for the current parameters."
+            )
+            return
+        
         for row_idx, feature in enumerate(features):
+
             self.products_table.insertRow(row_idx)
-            self.products_table.setItem(row_idx, 0, QTableWidgetItem(feature.get("id", "N/A")))
-            self.products_table.setItem(row_idx, 1, QTableWidgetItem(collection_name.upper()))
-            date_str = feature.get("properties", {}).get("datetime", "Unknown")
-            if date_str != "Unknown": date_str = date_str[:10]
-            self.products_table.setItem(row_idx, 2, QTableWidgetItem(date_str))
-            self.products_table.setItem(row_idx, 3, QTableWidgetItem("Ready to Download"))
+
+            # --------------------------
+            # PLUME RECORD
+            # --------------------------
+            if data_type == "Plumes":
+                feature_id = feature.get(
+                    "plume_id",
+                    "N/A"
+                )
+
+                date_str = feature.get(
+                    "datetime",
+                    "Unknown"
+                )
+
+                place = feature.get(
+                    "place",
+                    ""
+                )
+
+                region = feature.get(
+                    "region",
+                    ""
+                )
+
+                location = ", ".join(
+                    x for x in [place, region]
+                    if x
+                )
+
+                country = feature.get(
+                    "country",
+                    "Unknown"
+                )
+
+                sector = feature.get(
+                    "ipcc_sector",
+                    "Unknown"
+                )
+
+                if date_str != "Unknown":
+                    date_str = date_str[:10]
+                
+            # --------------------------
+            # SOURCE RECORD
+            # --------------------------
+            else:
+                feature_id = feature.get(
+                    "source_name",
+                    "N/A"
+                )   
+                
+                gas = feature.get(
+                    "gas",
+                    "Unknown" 
+                )
+
+                sector = feature.get(
+                    "ipcc_sector",
+                    "Unknown"
+                )
+
+                emission_raw = feature.get(
+                    "source_emission",
+                    ""
+                )
+                
+                try:
+                    emission = str(
+                        round(
+                            float(emission_raw),
+                            2
+                        )
+                    )
+                except:
+                    emission = "Unknown"
+          
+                persistence = str(
+                    round(
+                        float(
+                            feature.get(
+                                "source_persistence",
+                                0
+                            )
+                        ),
+                        2
+                    )
+                )
+
+            # Filling the Table for Plummes
+            if data_type == "Plumes":
+                self.products_table.setItem(
+                    row_idx,
+                    0,
+                    QTableWidgetItem(feature_id) # Feature ID
+                )
+
+                self.products_table.setItem(
+                    row_idx,
+                    1,
+                    QTableWidgetItem(date_str) # Date Info
+                )
+
+                self.products_table.setItem(
+                    row_idx,
+                    2,
+                    QTableWidgetItem(location) # Region + Place Info
+                )
+                
+                self.products_table.setItem(
+                    row_idx,
+                    3,
+                    QTableWidgetItem(country) # Country Info
+                )
+
+                self.products_table.setItem(
+                    row_idx,
+                    4,
+                    QTableWidgetItem(sector) # Sector Info
+                )
+
+                self.products_table.setItem(
+                    row_idx,
+                    5,
+                    QTableWidgetItem(
+                        "Ready to Download"
+                    )
+                )
+            
+            # Filling the Table for Source
+            else:
+                self.products_table.setItem(
+                    row_idx,
+                    0,
+                    QTableWidgetItem(feature_id)
+                )
+
+                self.products_table.setItem(
+                    row_idx,
+                    1,
+                    QTableWidgetItem(gas)
+                )
+
+                self.products_table.setItem(
+                    row_idx,
+                    2,
+                    QTableWidgetItem(sector)
+                )
+
+                self.products_table.setItem(
+                    row_idx,
+                    3,
+                    QTableWidgetItem(emission)
+                )
+
+                self.products_table.setItem(
+                    row_idx,
+                    4,
+                    QTableWidgetItem(str(persistence))
+                )
+
+                self.products_table.setItem(
+                    row_idx,
+                    5,
+                    QTableWidgetItem(
+                        "Ready"
+                    )
+                )
+
+    def update_table_headers(self):
+        data_type = self.combo_data_type.currentText()
+
+        if data_type == "Plumes":
+            self.products_table.setColumnCount(6)
+            self.products_table.setHorizontalHeaderLabels([
+                "Feature ID",
+                "Date",
+                "Location",
+                "Country",
+                "Sector",
+                "Status"
+            ])
+
+        else:
+            self.products_table.setColumnCount(6)
+            self.products_table.setHorizontalHeaderLabels([
+                "Source Name",
+                "Gas",
+                "Sector",
+                "Emission (kg/hr)",
+                "Persistence",
+                "Status"
+            ])
+        
+        self.products_table.setRowCount(0)
+
+    def open_source_plumes(self, row, column):
+        # For enabling to work only for Source selected
+        if self.combo_data_type.currentText() != "Sources":
+            return
+        
+        try:
+            source_feature = self.features[row]
+            source_name = source_feature.get(
+                "source_name"
+            )
+
+            if not source_name:
+                QMessageBox.warning(
+                    self,
+                    "Source Error",
+                    "Source name could not be found!"
+                )
+                return
+            
+            print(
+                f"Loading plumes for source: {source_name}"
+            )
+
+            from geoprojects.api.carbon_api import (
+                get_source_plumes
+            )
+
+            plumes = get_source_plumes(
+                source_name,
+                limit=100
+            )
+
+            if not plumes:
+                QMessageBox.information(
+                    self,
+                    "No Plumes",
+                    "No plumes records were returned for this source."
+                )
+                return
+            
+            #Now we will work with the plume list
+            self.features = plumes
+
+            # Temporarily switch the table to plume view
+            self.combo_data_type.blockSignals(True)
+            self.combo_data_type.setCurrentText(
+                "Plumes"
+            )
+
+            self.update_asset_type_visibility()
+            self.combo_data_type.blockSignals(False)
+            self.update_table_headers()
+
+            self.populate_table(
+                self.features
+            )
+
+            self.btn_back_to_sources.show()
+
+            QMessageBox.information(
+                self,
+                "Source Loaded",
+                f"{len(plumes)} plume records loaded."
+            )
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Source Error",
+                str(e)
+            )
+
+            print(
+                f"open_source_plumes error: {e}"
+            )
+
+    def back_to_sources(self):
+        if not self.source_features:
+            return
+        
+        self.combo_data_type.setCurrentText(
+            "Sources"
+        )
+
+        self.update_asset_type_visibility()
+
+        self.features = self.source_features
+
+        self.populate_table(
+            self.features
+        )
+
+        self.btn_back_to_sources.hide()
+
+    def update_asset_type_visibility(self):
+
+        if self.combo_data_type.currentText() == "Sources":
+             self.asset_combo.hide()
+             self.data_asset_type_label.hide()
+             self.btn_info_asset.hide()
+             self.btn_quick_tip.show()
+
+             
+        else:
+            self.asset_combo.show()
+            self.data_asset_type_label.show()
+            self.btn_info_asset.show()
+            self.btn_quick_tip.hide()
+    
+    def load_selected_features_to_qgis(self):
+
+        """
+        Loads the currently displayed search results into QGIS as point layers.
+        """
+        data_type = self.combo_data_type.currentText()
+
+        if data_type == "Plumes":
+            self.create_plume_point_layer()
+
+        elif data_type == "Sources":
+            self.create_source_point_layer()
+        
+        else:
+            QMessageBox.information(
+                self,
+                "Information",
+                "This data type cannot be loaded as a point layer."
+            )
+    def get_qvariant_type(self, value):
+        if isinstance(value, bool):
+            return QVariant.Bool
+        
+        elif isinstance(value, int):
+            return QVariant.Int
+        
+        elif isinstance(value, float):
+            return QVariant.Double
+        
+        else:
+            return QVariant.String
+
+    def create_plume_point_layer(self):
+
+        """
+        Creates an empty memory point layer for plume locations.
+        """
+
+        layer = QgsVectorLayer(
+            "Point?crs=EPSG:4326",
+            "Plume Points",
+            "memory"
+        )
+
+        if not layer.isValid():
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Could not create memory layer."
+            )
+            return
+        
+        if not self.features:
+            QMessageBox.warning(
+                self,
+                "Error",
+                "No plume data available."
+            )
+            return
+
+        provider = layer.dataProvider()
+        sample = self.features[0]
+        fields = []
+
+        for key, value in sample.items():
+            if key in [
+                "plume_longitude",
+                "plume_latitude"
+            ]:
+                continue
+            
+            fields.append(
+                QgsField(
+                    key,
+                    self.get_qvariant_type(value)
+                )
+            )
+        
+        provider.addAttributes(fields)
+        layer.updateFields()
+
+        for feature in self.features:
+
+            lon = float(feature["plume_longitude"])
+            lat = float(feature["plume_latitude"])
+
+            point = QgsFeature(layer.fields())
+
+            point.setGeometry(
+                QgsGeometry.fromPointXY(
+                    QgsPointXY(lon, lat)
+                )
+            )
+
+            attributes = []
+            for key in sample.keys():
+                if key in [
+                    "plume_longitude",
+                    "plume_latitude"
+                ]:
+                    continue
+                
+                value = feature.get(key)
+                if value is None:
+                    value = ""
+
+                if isinstance(value, (list, dict)):
+                    value = json.dumps(value)
+
+                attributes.append(value)
+            point.setAttributes(attributes)
+
+
+            provider.addFeature(point)
+       
+        layer.updateExtents()
+        layer.triggerRepaint()
+
+        QgsProject.instance().addMapLayer(layer)
+
+        QMessageBox.information(
+             self,
+             "Success",
+             "Plume point layer added to QGIS."
+         )
+
+    
+    def create_source_point_layer(self):
+
+        """
+        Creates an source layer for source locations.
+        """
+
+        layer = QgsVectorLayer(
+            "Point?crs=EPSG:4326",
+            "Source Points",
+            "memory"
+        )
+
+        if not layer.isValid():
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Could not create Source layer."
+            )
+            return
+        
+        if not self.features:
+            QMessageBox.warning(
+                self,
+                "Error",
+                "No source data available."
+            )
+            return
+
+        provider = layer.dataProvider()
+        sample = self.features[0]
+        fields = []
+
+        for key, value in sample.items():
+            if key in [
+                "source_longitude",
+                "source_latitude"
+            ]:
+                continue
+            
+            fields.append(
+                QgsField(
+                    key,
+                    self.get_qvariant_type(value)
+                )
+            )
+
+        fields.append(
+            QgsField(
+                "plume_ids",
+                QVariant.String
+            )
+        )
+
+        provider.addAttributes(fields)
+        layer.updateFields()
+
+        for feature in self.features:
+
+            lon = float(feature["source_longitude"])
+            lat = float(feature["source_latitude"])
+
+            point = QgsFeature(layer.fields())
+
+            point.setGeometry(
+                QgsGeometry.fromPointXY(
+                    QgsPointXY(lon, lat)
+                )
+            )
+
+            attributes = []
+            for key in sample.keys():
+                if key in [
+                    "source_longitude",
+                    "source_latitude"
+                ]:
+                    continue
+                
+                value = feature.get(key)
+
+                if value is None:
+                    value = ""
+
+                if isinstance(value, (list, dict)):
+                    value = json.dumps(value)
+
+                attributes.append(value)
+
+            plume_ids = self.source_plume_map.get(
+                feature["source_name"],
+                []
+            )
+
+            attributes.append(
+                "\n".join(plume_ids)
+            )
+
+            point.setAttributes(attributes)
+            provider.addFeature(point)
+       
+        layer.updateExtents()
+        layer.triggerRepaint()
+
+        QgsProject.instance().addMapLayer(layer)
+
+        QMessageBox.information(
+             self,
+             "Success",
+             "Source point layer added to QGIS."
+         )
+    
+    def populate_stac_collections(self):
+        self.filter_collections()
+       
 
     def handle_download(self):
+
+        # --------------------------------------------------
+        # STAC API Download
+        # --------------------------------------------------
+
+        if self.combo_api.currentText() == "STAC API":
+            self.handle_download_stac()
+            return
+        
         asset_combo = getattr(self, 'asset_combo', None)
-        coll_combo = getattr(self, 'collection_combo', None)
+        
        
         #  Capturing the raw API code using .currentData() during the download process.
-        collection = coll_combo.currentData() if (coll_combo and coll_combo.currentData()) else "l2b-ch4"
         token = self.token_input.text().strip() if hasattr(self, 'token_input') else ""
 
         if not self.features:
@@ -577,41 +1819,39 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
         for i, feature in enumerate(self.features):
             try:
                 if hasattr(self, 'products_table') and self.products_table:
-                    self.products_table.setItem(i, 3, QTableWidgetItem("Downloading..."))
+                    self.products_table.setItem(i, 5, QTableWidgetItem("Downloading..."))
                     self.products_table.repaint()
                
-                assets = feature.get('assets', {})
-               
-                user_selected_asset = asset_combo.currentText() if (asset_combo and asset_combo.currentText()) else None
-               
-                asset_type = None
-               
-                if user_selected_asset and user_selected_asset in assets:
-                    asset_type = user_selected_asset
-               
-                elif "l3a" in collection:
-                    asset_type = next((k for k in assets.keys() if 'geojson' in k.lower()), None)
-                   
-                    if not asset_type:
-                        asset_type = next((k for k in assets.keys() if 'plume' in k.lower() or 'vis' in k.lower()), None)
-                   
-                    if not asset_type and assets:
-                        asset_type = list(assets.keys())[0]
-                else:
-                    asset_type = user_selected_asset if user_selected_asset else "cmf.tif"
+                asset_type = (
+                    asset_combo.currentText()
+                    if asset_combo
+                    else "con_tif"
+                )
+                
+                asset_url = feature.get(asset_type)
 
-                if not asset_type:
-                    print(f" {feature['id']} No available asset was found!")
-                    if hasattr(self, 'products_table') and self.products_table:
-                        self.products_table.setItem(i, 3, QTableWidgetItem("No Asset"))
+                if not asset_url:
+                    self.products_table.setItem(
+                        i,
+                        4,
+                        QTableWidgetItem("Asset Missing")
+                    )
                     continue
-
-                print(f"The actual asset name to be downloaded: {asset_type}")
 
                 file_path = download_asset(feature=feature, token=token, asset_name=asset_type, index=i, output_dir=output_dir)
                
                 if file_path and os.path.exists(file_path):
-                    custom_layer_name = f"{collection}_{feature['id'][:8]}_{i}"
+
+                    if "plume_id" in feature:
+                        feature_name = feature["plume_id"]
+                    else:
+                        feature_name = feature.get(
+                            "id",
+                            f"feature_{i}"
+                        )
+                    custom_layer_name = (
+                        f"{asset_type}_{feature_name[:12]}"
+                    )
                    
                     if file_path.endswith(".tif"):
                         add_raster_to_qgis(file_path, custom_layer_name)
@@ -626,16 +1866,263 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
                            
                     download_count += 1
                     if hasattr(self, 'products_table') and self.products_table:
-                        self.products_table.setItem(i, 3, QTableWidgetItem("Success"))
+                        self.products_table.setItem(i, 5, QTableWidgetItem("Success"))
                 else:
                     if hasattr(self, 'products_table') and self.products_table:
-                        self.products_table.setItem(i, 3, QTableWidgetItem("Failed"))
+                        self.products_table.setItem(i, 5, QTableWidgetItem("Failed"))
             except Exception as e:
                 print(f"An error occurred during the download: {str(e)}")
                 if hasattr(self, 'products_table') and self.products_table:
-                    self.products_table.setItem(i, 3, QTableWidgetItem("Error"))
+                    self.products_table.setItem(i, 5, QTableWidgetItem("Error"))
             if hasattr(self, active_bar):
                 getattr(self, active_bar).setValue(i + 1)
 
         QMessageBox.information(self, "Successful", f"{download_count} data products successfully processed!")
         self.refresh_all_analysis_combos()
+
+    def handle_download_stac(self):
+    
+        import requests
+        import os
+
+        from geoprojects.utils.qgis_utils import add_raster_to_qgis
+
+        selected_rows = (
+            self.products_table.selectionModel().selectedRows()
+        )
+
+        if not selected_rows:
+            QMessageBox.information(
+                self,
+                "Selection",
+                "Please select a product"
+            )
+            return
+        
+        output_dir = self.output_dir_input.text().strip()
+
+        if not output_dir:
+            QMessageBox.warning(
+                self,
+                "Validation Error",
+                "Please Select an Output Directory"
+            )
+            return
+        
+        asset_name = (
+            self.stac_combo_asset.currentText()
+        )
+
+        if (
+            asset_name
+             == "There are no downloadable assets"
+        ):
+            QMessageBox.information(
+                self,
+                "STAC API",
+                "This collection does not contain downloadable assets."
+            )
+            return
+        
+        self.progress_bar.setValue(0)
+        self.progress_bar.setFormat("%p%")
+
+        download_count = 0
+        
+        for row in selected_rows:
+            feature = self.features[row.row()]
+            assets = feature.get(
+                "assets",
+                {}
+            )
+
+            asset = assets.get(
+                asset_name
+            )
+
+            if not asset:
+                self.products_table.setItem(
+                    row.row(),
+                    5,
+                    QTableWidgetItem(
+                        "Asset Missing"
+                    )
+                )
+                continue
+            
+            href = asset.get(
+                "href"
+            )
+
+            if not href:
+                self.products_table.setItem(
+                    row.row(),
+                    5,
+                    QTableWidgetItem(
+                        "Invalid URL"
+                    )
+                )
+                continue
+            
+            try:
+                token = self.token_input.text().strip()
+                headers = {}
+                if token:
+                    headers["Authorization"] = f"Bearer {token}"
+
+                self.products_table.setItem(
+                    row.row(),
+                    5,
+                    QTableWidgetItem("Downloading...")
+                )
+                QApplication.processEvents()
+
+                response = requests.get(
+                    href,
+                    headers=headers,
+                    stream=True,
+                    timeout=(10, 120)
+                )
+
+                if response.status_code != 200:
+                    self.products_table.setItem(
+                        row.row(),
+                        5,
+                        QTableWidgetItem(
+                            "Failed"
+                        )
+                    )
+                    continue
+                
+                total_size = int(
+                    response.headers.get(
+                        "content-length",
+                        0
+                    )
+                )
+
+                downloaded = 0
+
+                if total_size > 0:
+                    self.progress_bar.setMaximum(total_size)
+                    self.progress_bar.setValue(0)
+                    self.progress_bar.setFormat("Downloading... %p%")
+                else:
+                    self.progress_bar.setMaximum(0)
+                
+                if "." in asset_name:
+                    extension = "." + asset_name.split(".")[-1]
+                else:
+                    extension = os.path.splitext(href)[1]
+
+                if not extension:
+                    extension = ".dat"
+
+                filename = (
+                    feature["plume_id"]
+                    + "_"
+                    + asset_name
+                )
+
+                save_path = os.path.join(
+                    output_dir,
+                    filename
+                )
+
+                with open(
+                    save_path,
+                    "wb"
+                ) as f:
+                    
+                    for chunk in response.iter_content(
+                        chunk_size=8192
+                    ):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+
+                            if total_size > 0:
+                                self.progress_bar.setValue(downloaded)
+                            QApplication.processEvents()
+                response.close()
+
+                QApplication.processEvents()
+
+                layer_name = (
+                    feature["plume_id"]
+                    + "-"
+                    + asset_name
+                )
+
+                self.products_table.setItem(
+                    row.row(),
+                    5,
+                    QTableWidgetItem("Loading...")
+                )
+                self.progress_bar.setValue(
+                    self.progress_bar.maximum()
+                )
+                self.progress_bar.setFormat("Loading into QGIS...")
+                QApplication.processEvents()
+
+                if save_path.lower().endswith(
+                    (".tif", ".png", ".jpg", ".jpeg" )
+                ):
+                    add_raster_to_qgis(
+                        save_path,
+                        layer_name
+                    )
+
+                    QApplication.processEvents()
+
+                elif save_path.endswith((".geojson", ".json", ".shp")):
+                    v_layer = QgsVectorLayer(
+                        save_path,
+                        layer_name,
+                        "ogr"
+                    )
+
+                    if v_layer.isValid():
+                        QgsProject.instance().addMapLayer(v_layer)
+
+                self.products_table.setItem(
+                    row.row(),
+                    5,
+                    QTableWidgetItem(
+                        "Success"
+                    )
+                )
+
+                download_count += 1
+
+                self.progress_bar.setValue(
+                    self.progress_bar.maximum()
+                )
+                self.progress_bar.setFormat("Completed")
+                
+                QApplication.processEvents()
+            
+            except Exception as e:
+                print(e)
+
+                self.products_table.setItem(
+                    row.row(),
+                    5,
+                    QTableWidgetItem(
+                        "Error"
+                    )
+                )
+
+        QMessageBox.information(
+            self,
+            "Download Completed",
+            f"{download_count} asset(s) were downloaded successfully"
+        )
+
+    def open_token_help(self):
+        self.tabWidget.setCurrentIndex(3)
+
+
+
+
+
