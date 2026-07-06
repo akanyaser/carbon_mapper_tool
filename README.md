@@ -156,6 +156,10 @@ or
 
 - Manual Bounding Box
 
+or
+
+- Layer AOI
+
 Click Search.
 
 ---
