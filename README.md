@@ -191,6 +191,14 @@ This plugin is an independent academic project developed at **Politecnico di Mil
 
 ---
 
+## License
+
+This repository contains source code developed for academic purposes.
+
+Carbon Mapper datasets are **not distributed** with this repository and remain subject to the Carbon Mapper Terms of Use.
+
+---
+
 # 👨‍💻 Author
 
 **Yaser Enes Akan**
