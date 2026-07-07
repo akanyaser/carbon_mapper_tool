@@ -52,7 +52,7 @@ from qgis.core import (
     QgsPointXY
 )
 
-from geoprojects.api.carbon_api import (
+from .api.carbon_api import (
     search_plume_csv,
     get_all_plumes
 ) 

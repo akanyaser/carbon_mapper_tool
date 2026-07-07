@@ -1138,7 +1138,7 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
             # ------------------------
 
             if data_type == "Plumes":
-                from geoprojects.api.carbon_api import (
+                from .api.carbon_api import (
                     search_plume_csv
                 )
 
@@ -1154,11 +1154,11 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
             # ------------------------
 
             elif data_type == "Sources":
-                from geoprojects.api.carbon_api import (
+                from .api.carbon_api import (
                     search_sources_csv
                 )
 
-                from geoprojects.api.carbon_api import(
+                from .api.carbon_api import(
                     get_source_plumes
                 )
 
@@ -1601,7 +1601,7 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
                 f"Loading plumes for source: {source_name}"
             )
 
-            from geoprojects.api.carbon_api import (
+            from .api.carbon_api import (
                 get_source_plumes
             )
 
@@ -1953,8 +1953,8 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
             QMessageBox.warning(self, "Validation Error", "Please select an Output Directory before downloading!")
             return
 
-        from geoprojects.api.carbon_api import download_asset
-        from geoprojects.utils.qgis_utils import add_raster_to_qgis
+        from .api.carbon_api import download_asset
+        from .utils.qgis_utils import add_raster_to_qgis
 
         total_files = len(self.features)
         download_count = 0
@@ -2032,7 +2032,7 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
         import requests
         import os
 
-        from geoprojects.utils.qgis_utils import add_raster_to_qgis
+        from .utils.qgis_utils import add_raster_to_qgis
 
         selected_rows = (
             self.products_table.selectionModel().selectedRows()
