@@ -7,6 +7,7 @@ selected asset files with the provided access token. Downloaded files are saved
 to the user's Downloads folder so they can be loaded by QGIS afterward.
 """
 
+from urllib.parse import quote
 import os
 import requests
 import csv
@@ -185,18 +186,19 @@ def search_data(collection, bbox, datetime_range, limit=10, token=""):
     except Exception as e:
         # Hatayı plugin.py yakalasın diye yukarı fırlatıyoruz
         raise Exception(f"Search failed: {str(e)}")
-    
+
 def get_source_plumes(
         source_name,
         limit=10
 ):
-    
     """
     Returns plume records belonging to a source.
     """
+    encoded_source = quote(source_name, safe="")
+
     url = (
         "https://api.carbonmapper.org/api/v1/catalog/"
-        f"source-plumes-csv/{source_name}"
+        f"source-plumes-csv/{encoded_source}"
     )
 
     params = {

@@ -1,14 +1,13 @@
+
 # Carbon Mapper Data Exploration Tool
 
-A QGIS plugin for searching, downloading and analyzing Carbon Mapper methane (CH4) and carbon dioxide (CO2) datasets directly within QGIS.
+A QGIS plugin for searching, downloading, visualizing, and analyzing Carbon Mapper methane (CH4) and carbon dioxide (CO2) datasets directly within QGIS.
 
-This plugin integrates both the **Carbon Mapper STAC API** and the **Carbon Mapper Data API**, allowing users to discover datasets, download remote sensing assets, visualize emission sources, and perform statistical comparisons between multiple geographic regions.
+The plugin integrates the **Carbon Mapper STAC API** and **Carbon Mapper Data API** to support dataset discovery, remote sensing asset downloads, plume and source visualization, and statistical comparisons between geographic regions.
 
-> This project was developed as part of the **Geoinformatics Projects** course at **Politecnico di Milano**.
+This project was developed as part of the **Geoinformatics Projects** course at **Politecnico di Milano**.
 
----
-
-# - Supported Services
+## Supported Services
 
 - Carbon Mapper STAC API
 - Carbon Mapper Data API
@@ -18,63 +17,56 @@ Official websites:
 - https://data.carbonmapper.org
 - https://api.carbonmapper.org
 
----
+## Features
 
-#  Features
+### 1. Dataset Discovery
 
-## - Dataset Discovery
+Search Carbon Mapper datasets and records using the available APIs.
 
-- Search Carbon Mapper collections through the STAC API
-- Search plume and source records through the Data API
-- Filter datasets by:
-  - Gas (CH4 / CO2)
-  - Collection
-  - Processing Level
-  - Date Range
-  - Area of Interest (AOI)
+Supported search filters include:
 
----
+- Gas type (CH4 / CO2)
+- Collection
+- Processing level
+- Date range
+- Area of Interest (AOI)
 
-## - Asset Download
+### 2. Asset Download
 
 Download available Carbon Mapper assets directly into QGIS.
 
-Supported asset types include:
+Supported asset formats and products may include:
 
 - GeoTIFF
-- PNG
-- RGB Images
-- Concentration Maps
-- Plume Layers
+- PNG and RGB imagery
+- Concentration maps
+- Plume-related products
 
----
+Available assets depend on the selected dataset and collection.
 
-## - Visualization
+### 3. Visualization
 
-- Display plume locations on the QGIS map
-- Display emission source locations
-- Automatically create QGIS vector layers
-- Load downloaded assets directly into the current project
+- Display plume and emission-source locations
+- Create QGIS vector layers from available records
+- Load downloaded raster assets into the current QGIS project
 
----
+### 4. Statistical Comparison Tool
 
-## - Statistical Comparison Tool
-
-The Statistical Comparison Tool allows users to compare multiple geographic regions using Carbon Mapper plume observations.
+Compare multiple geographic regions using Carbon Mapper plume observations.
 
 Users can:
 
 - Select a polygon layer
 - Choose an attribute field
 - Compare two or more regions
-- Select gas type
+- Select a gas type
 - Specify a date range
 - Export comparison results as CSV
 
-Calculated statistics include:
+The tool supports the following statistics, where the corresponding data are available:
 
 | Statistic | Unit |
-|-----------|------|
+|---|---|
 | Number of Plumes | Count |
 | Number of Emission Records | Count |
 | Mean Emission | kg/hr |
@@ -83,40 +75,40 @@ Calculated statistics include:
 | Maximum Emission | kg/hr |
 | Standard Deviation | kg/hr |
 
----
+Emission statistics depend on the fields and records returned by the underlying data service. They should not be interpreted as independently measured emission rates unless supported by the source data.
 
-## - User Interface
+### 5. User Interface
 
-The plugin provides an interactive graphical interface including:
+The plugin provides a graphical interface with features including:
 
-- Area of Interest selection
-- Bounding Box tools
+- Map canvas and bounding-box AOI selection
+- Layer-based AOI selection
 - STAC API search
 - Data API search
-- Download manager
-- Statistical comparison interface
+- Asset download controls
+- Statistical comparison
 - CSV export
-- Built-in Help & Documentation
-
----
-
-# - Installation
+- Built-in help and documentation
 
 ## Requirements
 
-- QGIS 3.22 or higher
+- QGIS 3.22 or later (as specified by the current project documentation; compatibility should be tested against the intended QGIS versions)
 - Internet connection
-- Python package:
+- Python package: `requests`
+
+Install the Python dependency in the Python environment used by QGIS if it is not already available:
 
 ```bash
 pip install requests
 ```
 
----
+Some STAC API operations may require a Carbon Mapper API token.
 
-## Manual Installation
+## Installation
 
-Clone this repository:
+### Manual Installation from GitHub
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/akanyaser/carbon_mapper_tool.git
@@ -124,129 +116,87 @@ git clone https://github.com/akanyaser/carbon_mapper_tool.git
 
 Copy the plugin folder into your QGIS plugins directory.
 
-### Windows
+**Windows**
 
 ```text
-C:\Users\<Username>\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins
+%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\
 ```
 
-### Linux
+**Linux**
 
 ```text
-~/.local/share/QGIS/QGIS3/profiles/default/python/plugins
+~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/
 ```
 
-Restart QGIS and enable the plugin from:
+Restart QGIS and enable the plugin through:
 
 **Plugins → Manage and Install Plugins**
 
----
+> This is the manual installation procedure. Installation through the official QGIS Plugin Repository will be available after the plugin is accepted and published.
 
-# - Quick Start
+## Quick Start
 
-## 1. Area of Interest
+### 1. Select an Area of Interest
 
-Open the plugin.
+Open the plugin and select one of the available AOI methods:
 
-Select:
+- Map canvas
+- Manual bounding box
+- Existing layer
 
-- Map Canvas
+Configure the search parameters and run the search.
 
-or
+### 2. Search and Download
 
-- Manual Bounding Box
+Select the desired collection and asset, then start the download. Available products depend on the selected dataset.
 
-or
+### 3. Compare Geographic Regions
 
-- Layer AOI
+Open the statistical comparison interface and select:
 
-Click Search.
-
----
-
-## 2. Download
-
-Choose:
-
-- Collection
-
-- Asset
-
-Click Download.
-
----
-
-## 3. Statistical Comparison
-
-Open the Analysis tab.
-
-Select:
-
-- Polygon Layer
-
-- Attribute Field
-
+- Polygon layer
+- Attribute field
 - Two or more regions
+- Gas type
+- Date range
 
-- Gas
+Run the comparison and export the results as CSV if required.
 
-- Date Range
+## STAC API Authentication
 
-Click Compare.
+Some STAC API operations require a Carbon Mapper API token.
 
-Export the results as CSV if desired.
+To obtain a token:
 
----
+1. Visit https://data.carbonmapper.org.
+2. Sign in, if required.
+3. Obtain an API token using the service's supported procedure.
+4. Enter the token in the plugin's API token field.
 
-# STAC API Authentication
+Authentication requirements may vary by API operation.
 
-Some STAC API operations require a Carbon Mapper API Token.
+The statistical comparison tool uses the Data API as implemented in this project. Confirm the authentication requirements of the relevant endpoint before relying on unauthenticated access.
 
-To obtain one:
-
-1. Visit:
-
-https://data.carbonmapper.org
-
-2. Sign in.
-
-3. Generate an API Token.
-
-4. Paste it into the API Token field.
-
-Note:
-
-The Data API used by the Statistical Comparison Tool does not require authentication.
-
----
-
-# - Project Structure
+## Project Structure
 
 ```text
-plugin.py
-│
-├── Main plugin controller
-
-api/
-└── carbon_api.py
-    Carbon Mapper STAC API & Data API interface
-
-statistical_tool.py
-    Statistical comparison module
-
-help_messages.py
-    Plugin help messages
-
-widget.ui
-    Qt Designer user interface
-
-metadata.txt
-    Plugin metadata
+carbon_mapper_tool/
+├── api/
+│   └── carbon_api.py
+├── utils/
+│   └── qgis_utils.py
+├── __init__.py
+├── help_messages.py
+├── metadata.txt
+├── plugin.py
+├── statistical_tool.py
+├── widget.ui
+├── README.md
+├── LICENSE
+└── .gitignore
 ```
 
----
-
-# - Technologies
+## Technologies
 
 - Python
 - PyQGIS
@@ -254,34 +204,25 @@ metadata.txt
 - Carbon Mapper STAC API
 - Carbon Mapper Data API
 
----
+## Data Attribution and Terms of Use
 
-# - Data Attribution and Terms of Use
+This plugin provides access to Carbon Mapper datasets through the relevant Carbon Mapper APIs.
 
-This plugin provides access to publicly available Carbon Mapper datasets through the official Carbon Mapper STAC API and Data API.
-
-Users should acknowledge **Carbon Mapper** as the original data provider when publishing analyses, maps or other derivative works generated using these datasets.
-
-Use of the Carbon Mapper services and datasets is subject to the official Carbon Mapper Terms of Use:
+Users should acknowledge **Carbon Mapper** as the data provider when publishing analyses, maps, or derivative products, and should comply with the applicable data and service terms:
 
 https://carbonmapper.org/terms
 
-This plugin is an independent academic project developed at **Politecnico di Milano** and is **not affiliated with or endorsed by Carbon Mapper**.
-
----
+This is an independent academic project developed at **Politecnico di Milano**. It is not affiliated with, endorsed by, or officially supported by Carbon Mapper.
 
 ## License
 
-This repository contains source code developed for academic purposes.
+The plugin source code is distributed under the **GNU General Public License v2.0 (GPL-2.0)**, subject to the terms in the accompanying `LICENSE` file.
 
-Carbon Mapper datasets are **not distributed** with this repository and remain subject to the Carbon Mapper Terms of Use.
+Carbon Mapper datasets are not distributed with this repository. Their use remains subject to the applicable Carbon Mapper data and service terms.
 
----
-
-#  Author
+## Author
 
 **Yaser Enes Akan**
 
 Department of Civil and Environmental Engineering
-
 Politecnico di Milano

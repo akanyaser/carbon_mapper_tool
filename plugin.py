@@ -2164,11 +2164,14 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
 
                 if not extension:
                     extension = ".dat"
+                item_id = (
+                    feature.get("plume_id")
+                    or feature.get("id")
+                    or "unknown"
+                )
 
                 filename = (
-                    feature["plume_id"]
-                    + "_"
-                    + asset_name
+                    f"{item_id}_{asset_name}{extension}"
                 )
 
                 save_path = os.path.join(
@@ -2196,9 +2199,7 @@ class CarbonMapperPlugin(QDialog, FORM_CLASS):
                 QApplication.processEvents()
 
                 layer_name = (
-                    feature["plume_id"]
-                    + "-"
-                    + asset_name
+                    f"{item_id}-{asset_name}"
                 )
 
                 self.products_table.setItem(

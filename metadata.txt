@@ -1,3 +1,4 @@
+
 [general]
 name=Carbon Mapper Plugin
 qgisMinimumVersion=3.0
@@ -12,5 +13,6 @@ tags=python, carbon mapper, ch4, co2, remote sensing, spatial analysis
 homepage=https://github.com/akanyaser/carbon_mapper_tool
 tracker=https://github.com/akanyaser/carbon_mapper_tool/issues
 repository=https://github.com/akanyaser/carbon_mapper_tool
+license=GPL-2.0
 
 experimental=True
